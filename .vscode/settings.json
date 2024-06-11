@@ -4,11 +4,10 @@
             "previewLimit": 50,
             "server": "localhost",
             "port": 5432,
-            "askForPassword": true,
             "driver": "PostgreSQL",
-            "database": "youtube_analysis",
-            "username": "postgres",
-            "name": "youtube_conn"
+            "name": "dbq_connect",
+            "database": "death_by_query_db",
+            "username": "postgres"
         }
     ]
 }

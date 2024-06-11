@@ -1,2 +1,4 @@
-# query-tube
-querying youtube's content and creator details using SQL in order to identify top creators and their demographic
+# death by query
+
+Analysing the most common causes of death around the world, and the various demographic 
+it affects using SQL.
