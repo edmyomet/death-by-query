@@ -18,4 +18,4 @@ WHERE TABLE_NAME = 'dbq_temporary_table'
 ORDER BY col_name DESC
 LIMIT 29;
 
-SELECT * FROM countries;
+
