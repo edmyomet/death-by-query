@@ -8,6 +8,15 @@
             "name": "dbq_connect",
             "database": "death_by_query_db",
             "username": "postgres"
+        },
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "dbq_querying_conn",
+            "database": "death_by_query_db",
+            "username": "postgres"
         }
     ]
 }

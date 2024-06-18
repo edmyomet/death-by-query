@@ -49,16 +49,95 @@ ALTER TABLE dbq_temporary_table
 ADD CONSTRAINT temp_pk 
 PRIMARY KEY(index,country_code);
 
+DROP TABLE IF EXISTS countries;
+CREATE TABLE IF NOT EXISTS countries(
+    country_code VARCHAR,
+    country_name VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS diseases(
+    disease_id BIGSERIAL PRIMARY KEY, 
+    disease_name VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS death_toll(
+    country_code VARCHAR, 
+    year_of_study VARCHAR(4), 
+    disease_id INTEGER,
+    deaths NUMERIC
+);
 
 
-SELECT SUM(country_count) AS country_total
+INSERT INTO countries
+SELECT DISTINCT dbq_temporary_table.country_code, dbq_temporary_table.country
+FROM dbq_temporary_table
+ORDER BY dbq_temporary_table.country_code ASC;
+
+
+SELECT c AS country_count
+FROM(
+    SELECT DISTINCT COUNT(country_code) AS c
+    FROM countries
+    GROUP BY country_code
+)subquery_alias;
+
+SELECT country_code
+FROM countries
+GROUP BY country_code
+HAVING COUNT(country_code) = 23;
+
+SELECT * FROM countries
+WHERE country_code = 'wb';
+
+UPDATE countries
+SET country_code = 'WAL'
+WHERE country_name = 'Wales';
+
+UPDATE countries
+SET country_code='ENG'
+WHERE country_name = 'England';
+
+UPDATE countries
+SET country_code = 'AFR'
+WHERE country_name = 'African Region who';
+
+UPDATE countries
+SET country_code='SA'
+WHERE country_name = 'South Asia wb';
+
+UPDATE countries
+SET country_code='NA'
+WHERE country_name ='North Asia wb';
+
+UPDATE countries
+SET country_code = 'MENA'
+WHERE country_name='Middle East & North Africa wb';
+
+UPDATE countries
+SET country_code = 'EM'
+WHERE country_name = 'Eastern Mediterranean Region who';
+
+
+UPDATE countries
+SET country_code = tmp.cname
 FROM (
-    SELECT DISTINCT COUNT(country_code) AS country_count
-    FROM dbq_temporary_table
-    WHERE country_code IN (
-        SELECT DISTINCT country_code
-        FROM dbq_temporary_table
-    )
-) subquery_alias;
+    VALUES ('EUR','European Region who'), ('OECD','OECD Countries'), ('EUCA','Europe & Central Asia wb'),
+    ('SSA','SubSaharan Africa wb'), ('G20','G20'),('SEA','SouthEast Asia Region who'),
+    ('NIR','Northern Ireland'),('WPR','Western Pacific Region who'),('EAP','East Asia & Pacific wb'),
+    ('NAM','North America wb'),('LAC','Latin America & Caribbean wb'),('SCO','Scotland'),('RAM','Region of the Americas who'),
+    ('HINC','World Bank High Income'),('LINC','World Bank Low Income'), ('LMINC','World Bank Lower Middle Income'),
+    ('LUINC','World Bank Upper Middle Income'))
+AS tmp(country_code, cname)
+WHERE country_name = tmp.cname;
+
+ALTER TABLE countries ADD CONSTRAINT countries_pk PRIMARY KEY(country_code);
 
 
+SELECT * FROM diseases;
+
+
+INSERT INTO diseases 
+SELECT column_name AS col_name
+FROM INFORMATION_SCHEMA.columns
+WHERE TABLE_NAME = 'dbq_temporary_table'
+ORDER BY col_name DESC;
