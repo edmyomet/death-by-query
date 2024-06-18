@@ -46,7 +46,8 @@ DELIMITER ','
 CSV HEADER;
 
 --indexing the table
-ALTER TABLE dbq_temporary_table ADD COLUMN index BIGSERIAL;
+ALTER TABLE dbq_temporary_table 
+ADD COLUMN index BIGSERIAL;
 
 --adding primary key constraints on the index and country code attributes
 ALTER TABLE dbq_temporary_table
@@ -149,7 +150,9 @@ AS tmp(country_code, cname)
 WHERE country_name = tmp.cname;
 
 --adding primary key constraint to the table (over country code) once duplications have been removed
-ALTER TABLE countries ADD CONSTRAINT countries_pk PRIMARY KEY(country_code);
+ALTER TABLE countries 
+ADD CONSTRAINT countries_pk 
+PRIMARY KEY(country_code);
 
 --creating a procedure to insert records into the diseases relation
 CREATE OR REPLACE PROCEDURE insert_disease_records(
@@ -217,19 +220,32 @@ FROM diseases;
 --DELETE FROM death_toll
 --WHERE true;
 
-INSERT INTO death_toll(disease_id)
-SELECT disease_id 
-FROM diseases;
+--inserting country code from countries relation and disease id from diseases relation
+--for every country, 32 diseases are present
+--INSERT INTO death_toll(country_code, disease_id)
+--SELECT countries.country_code AS country_code, diseases.disease_id AS disease_id
+--FROM countries, diseases;
 
 
-INSERT INTO death_toll(country_code)
-SELECT country_code
-FROM countries 
-ORDER BY country_code ASC
-LIMIT 1;
+--combination of country code and disease id are the primary keys for death toll relation
+ALTER TABLE death_toll 
+ADD CONSTRAINT death_toll_pk 
+PRIMARY KEY(country_code, disease_id);
 
-SELECT * FROM death_toll;
+--adding foreign key constaints - country code
+ALTER TABLE death_toll 
+ADD CONSTRAINT death_toll_fk1 
+FOREIGN KEY(country_code)
+REFERENCES countries(country_code);
+
+--adding foregin key constraints - disease id 
+ALTER TABLE death_toll
+ADD CONSTRAINT death_toll_fk2
+FOREIGN KEY(disease_id)
+REFERENCES diseases(disease_id);
 
 
+--entering death tolls for countries during the year 1990
 
-
+SELECT * FROM dbq_temporary_table
+WHERE year = '1990';
