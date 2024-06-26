@@ -41,7 +41,7 @@ CREATE TABLE dbq_temporary_table(
 
 --copying values from the csv file to the temp table
 COPY dbq_temporary_table
-FROM 'C:\Users\shrut\OneDrive\Desktop\sql projects\cause of deaths analysis\Annual cause death numbers new.csv'
+FROM '/home/shruthi/Desktop/github_projects/sql_projects/death_by_query/Annual cause death numbers new.csv'
 DELIMITER ','
 CSV HEADER;
 
@@ -136,23 +136,24 @@ WHERE country_code = 'wb';
 
 --setting new country codes for the regions/countries that have the same code
 UPDATE countries
-SET country_code = tmp.cname
+SET country_code = tmp.country_code
 FROM (
-    VALUES ('WAL','Wales'),('ENG','England'),('AFR','African Region who'),('SA','South Asia wb'),
-    ('NA','North Asia wb'),('MENA','Middle East & North Africa wb'),('EM','Eastern Mediterranean Region who'),
-    ('EUR','European Region who'), ('OECD','OECD Countries'), ('EUCA','Europe & Central Asia wb'),
-    ('SSA','SubSaharan Africa wb'), ('G20','G20'),('SEA','SouthEast Asia Region who'),
-    ('NIR','Northern Ireland'),('WPR','Western Pacific Region who'),('EAP','East Asia & Pacific wb'),
-    ('NAM','North America wb'),('LAC','Latin America & Caribbean wb'),('SCO','Scotland'),('RAM','Region of the Americas who'),
+    VALUES ('WAL','Wales'),('ENGW','England'),('AFRW','African Region who'),('SAW','South Asia wb'),
+    ('NAW','North Asia wb'),('MENA','Middle East & North Africa wb'),('EMR','Eastern Mediterranean Region who'),
+    ('EURW','European Region who'), ('OECD','OECD Countries'), ('EUCAW','Europe & Central Asia wb'),
+    ('SSAW','SubSaharan Africa wb'), ('G20','G20'),('SEAW','SouthEast Asia Region who'),
+    ('NIRD','Northern Ireland'),('WPR','Western Pacific Region who'),('EAPW','East Asia & Pacific wb'),
+    ('NAMW','North America wb'),('LAC','Latin America & Caribbean wb'),('SCO','Scotland'),('RAMW','Region of the Americas who'),
     ('HINC','World Bank High Income'),('LINC','World Bank Low Income'), ('LMINC','World Bank Lower Middle Income'),
     ('LUINC','World Bank Upper Middle Income'))
 AS tmp(country_code, cname)
 WHERE country_name = tmp.cname;
 
+
 --adding primary key constraint to the table (over country code) once duplications have been removed
-ALTER TABLE countries 
-ADD CONSTRAINT countries_pk 
-PRIMARY KEY(country_code);
+--ALTER TABLE countries 
+--ADD CONSTRAINT countries_pk 
+--PRIMARY KEY(country_code);
 
 --creating a procedure to insert records into the diseases relation
 CREATE OR REPLACE PROCEDURE insert_disease_records(
@@ -222,30 +223,196 @@ FROM diseases;
 
 --inserting country code from countries relation and disease id from diseases relation
 --for every country, 32 diseases are present
---INSERT INTO death_toll(country_code, disease_id)
---SELECT countries.country_code AS country_code, diseases.disease_id AS disease_id
---FROM countries, diseases;
+INSERT INTO death_toll(country_code, disease_id)
+SELECT countries.country_code AS country_code, diseases.disease_id AS disease_id
+FROM countries, diseases;
 
-
---combination of country code and disease id are the primary keys for death toll relation
+--adding a composite key
 ALTER TABLE death_toll 
-ADD CONSTRAINT death_toll_pk 
+ADD CONSTRAINT pk_death_toll
 PRIMARY KEY(country_code, disease_id);
 
---adding foreign key constaints - country code
-ALTER TABLE death_toll 
-ADD CONSTRAINT death_toll_fk1 
-FOREIGN KEY(country_code)
-REFERENCES countries(country_code);
 
---adding foregin key constraints - disease id 
-ALTER TABLE death_toll
-ADD CONSTRAINT death_toll_fk2
-FOREIGN KEY(disease_id)
-REFERENCES diseases(disease_id);
+--queries to load the structure of various tables 
+--selecting singlular column name from columns returned by information scheme
+SELECT column_name as cname
+FROM INFORMATION_SCHEMA.columns
+WHERE TABLE_NAME = 'dbq_temporary_table'
+AND column_name = 'parkinsons';
+
+--displaying disease ids with their corresponding disease names (displayed as columns)
+--in the dbq_temporary_table relation, using information schema and left join on disease name
+SELECT diseases.disease_id, tmp.cname 
+FROM diseases
+LEFT OUTER JOIN (
+    SELECT column_name AS cname
+    FROM INFORMATION_SCHEMA.columns
+    WHERE TABLE_NAME='dbq_temporary_table' 
+) AS tmp(cname)
+ON diseases.disease_name = tmp.cname;
+
+--selecting the names of countries and the diseases 
+SELECT countries.country_name, tmp.cname
+FROM countries
+CROSS JOIN (
+    SELECT column_name AS cname 
+    FROM INFORMATION_SCHEMA.columns
+    WHERE TABLE_NAME = 'dbq_temporary_table'
+) AS tmp(cname)
+WHERE tmp.cname NOT IN (
+    VALUES ('country'),('country_code'), ('year'), ('index')
+);
+
+DO $$
+DECLARE column_vars VARCHAR[];
+BEGIN 
+    SELECT column_name INTO column_vars
+    FROM INFORMATION_SCHEMA.columns
+    WHERE TABLE_NAME = 'dbq_temporary_schema'
+    AND column_name NOT IN (
+        VALUES ('country'),('country_code'),('year'),('index')
+    );
+END $$; 
+
+--join operation on country and death toll relation
+SELECT countries.country_name AS cname, death_toll.disease_id AS id
+FROM countries 
+LEFT OUTER JOIN death_toll
+ON countries.country_code = death_toll.country_code;
 
 
---entering death tolls for countries during the year 1990
+SELECT death_toll.deaths_1990,country_code
+FROM death_toll
+WHERE disease_id = 13
+AND country_code IN (
+    SELECT country_code
+    FROM countries
+);
 
-SELECT * FROM dbq_temporary_table
-WHERE year = '1990';
+UPDATE dbq_temporary_table
+SET country_code = tmp.ccode
+FROM (
+    SELECT country_name, country_code
+    FROM countries 
+    ORDER BY country_code  
+)AS tmp(cname,ccode)
+WHERE dbq_temporary_table.country = tmp.cname;
+
+--updating death toll values for malaria for all 30 years
+UPDATE death_toll
+SET deaths_2009 = tmp.malaria
+FROM (
+    SELECT dbq_temporary_table.malaria,dbq_temporary_table.country_code
+    FROM dbq_temporary_table
+    WHERE dbq_temporary_table.country_code IN (
+        SELECT death_toll.country_code
+        FROM death_toll
+        ORDER BY death_toll.country_code ASC  
+    )
+    AND year='2009'
+)AS tmp(malaria, code)
+WHERE death_toll.disease_id = 13
+AND death_toll.country_code =  tmp.code;
+
+
+--updating death toll values for tuberculosis  
+UPDATE death_toll
+SET deaths_1992 =tmp.disease_1, deaths_2019 = tmp.disease_2
+FROM (
+    SELECT tmp1.disease_1, tmp2.disease_2,tmp1.code
+    FROM (
+        SELECT dbq_temporary_table.diabetes, dbq_temporary_table.country_code
+        FROM dbq_temporary_table
+        WHERE year='1992'
+    )AS tmp1(disease_1,code)
+    LEFT OUTER JOIN (
+        SELECT dbq_temporary_table.diabetes, dbq_temporary_table.country_code
+        FROM dbq_temporary_table
+        WHERE year = '2019'
+    )AS tmp2(disease_2,code)
+    ON tmp1.code = tmp2.code
+)AS tmp(disease_1,disease_2,code)
+WHERE death_toll.disease_id = 24
+AND death_toll.country_code = tmp.code;
+
+
+
+--updating death toll for different diseases from the year 1990-1997
+UPDATE death_toll
+SET deaths_2014 = tmp.d90, deaths_1991=tmp.d91, deaths_1992=tmp.d92, deaths_1993=tmp.d93,
+    deaths_1994=tmp.d94, deaths_1995=tmp.d95, deaths_1996=tmp.d96, deaths_1997=tmp.d97
+FROM (
+    SELECT temp.d90, temp.d91, temp.d92, temp.d93,
+           temp1.d94, temp1.d95, temp1.d96, temp1.d97, temp.code
+    FROM(
+        SELECT tmp1.d90, tmp1.d91, tmp2.d92, tmp2.d93,tmp1.code
+        FROM (
+            SELECT tp1.d90, tp2.d91, tp1.code
+            FROM (
+                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                FROM dbq_temporary_table
+                WHERE year='2014'
+            )AS tp1(d90,code)
+            LEFT OUTER JOIN(
+                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                FROM dbq_temporary_table
+                WHERE year='1991'
+            )AS tp2(d91,code)
+            ON tp1.code=tp2.code            
+        )AS tmp1(d90, d91, code)
+        LEFT OUTER JOIN(
+            SELECT tp3.d92, tp4.d93, tp3.code
+            FROM (
+                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                FROM dbq_temporary_table
+                WHERE year='1992'
+            )AS tp3(d92,code)
+            LEFT OUTER JOIN(
+                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                FROM dbq_temporary_table
+                WHERE year='1993'
+            )AS tp4(d93,code)
+            ON tp3.code = tp4.code
+        )AS tmp2(d92,d93,code)
+        ON tmp1.code = tmp2.code
+    )AS temp(d90,d91,d92,d93,code)
+    LEFT OUTER JOIN(
+        SELECT tmp3.d94, tmp3.d95, tmp4.d96, tmp4.d97, tmp3.code
+        FROM (
+            SELECT tp5.d94, tp6.d95, tp5.code
+            FROM(
+                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                FROM dbq_temporary_table
+                WHERE year='1994'
+            )AS tp5(d94,code)
+            LEFT OUTER JOIN(
+                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                FROM dbq_temporary_table
+                WHERE year='1995'
+            )AS tp6(d95,code)
+            ON tp5.code = tp6.code
+        )AS tmp3(d94,d95,code)
+        LEFT OUTER JOIN(
+            SELECT tp7.d96, tp8.d97, tp7.code
+            FROM(
+                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                FROM dbq_temporary_table
+                WHERE year='1996'
+            )AS tp7(d96,code)
+            LEFT OUTER JOIN(
+                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                FROM dbq_temporary_table
+                WHERE year='1997'
+            )AS tp8(d97,code)
+            ON tp7.code = tp8.code
+        )AS tmp4(d96,d97,code)
+        ON tmp3.code= tmp4.code
+    )AS temp1(d94,d95,d96,d97,code)
+    ON temp.code = temp1.code
+)AS tmp(d90,d91,d92,d93,d94,d95,d96,d97,code)
+WHERE death_toll.country_code = tmp.code
+AND death_toll.disease_id=5;
+
+
+SELECT * FROM death_toll
+WHERE disease_id=6; 
