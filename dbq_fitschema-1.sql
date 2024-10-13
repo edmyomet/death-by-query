@@ -335,11 +335,9 @@ FROM (
 WHERE death_toll.disease_id = 24
 AND death_toll.country_code = tmp.code;
 
-
-
 --updating death toll for different diseases from the year 1990-1997
 UPDATE death_toll
-SET deaths_2014 = tmp.d90, deaths_1991=tmp.d91, deaths_1992=tmp.d92, deaths_1993=tmp.d93,
+SET deaths_1990 = tmp.d90, deaths_1991=tmp.d91, deaths_1992=tmp.d92, deaths_1993=tmp.d93,
     deaths_1994=tmp.d94, deaths_1995=tmp.d95, deaths_1996=tmp.d96, deaths_1997=tmp.d97
 FROM (
     SELECT temp.d90, temp.d91, temp.d92, temp.d93,
@@ -349,70 +347,71 @@ FROM (
         FROM (
             SELECT tp1.d90, tp2.d91, tp1.code
             FROM (
-                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                SELECT dbq_temporary_table.self_harm, dbq_temporary_table.country_code
                 FROM dbq_temporary_table
-                WHERE year='2014'
+                WHERE year='1990'
             )AS tp1(d90,code)
             LEFT OUTER JOIN(
-                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                SELECT dbq_temporary_table.road_injury, dbq_temporary_table.country_code
                 FROM dbq_temporary_table
                 WHERE year='1991'
             )AS tp2(d91,code)
-            ON tp1.code=tp2.code            
+            USING(code)          
         )AS tmp1(d90, d91, code)
         LEFT OUTER JOIN(
             SELECT tp3.d92, tp4.d93, tp3.code
             FROM (
-                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                SELECT dbq_temporary_table.road_injury, dbq_temporary_table.country_code
                 FROM dbq_temporary_table
                 WHERE year='1992'
             )AS tp3(d92,code)
             LEFT OUTER JOIN(
-                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                SELECT dbq_temporary_table.road_injury, dbq_temporary_table.country_code
                 FROM dbq_temporary_table
                 WHERE year='1993'
             )AS tp4(d93,code)
-            ON tp3.code = tp4.code
+           USING(code)
         )AS tmp2(d92,d93,code)
-        ON tmp1.code = tmp2.code
+        USING(CODE)
     )AS temp(d90,d91,d92,d93,code)
     LEFT OUTER JOIN(
         SELECT tmp3.d94, tmp3.d95, tmp4.d96, tmp4.d97, tmp3.code
         FROM (
             SELECT tp5.d94, tp6.d95, tp5.code
             FROM(
-                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                SELECT dbq_temporary_table.road_injury, dbq_temporary_table.country_code
                 FROM dbq_temporary_table
                 WHERE year='1994'
             )AS tp5(d94,code)
             LEFT OUTER JOIN(
-                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                SELECT dbq_temporary_table.road_injury, dbq_temporary_table.country_code
                 FROM dbq_temporary_table
                 WHERE year='1995'
             )AS tp6(d95,code)
-            ON tp5.code = tp6.code
+            USING(code)
         )AS tmp3(d94,d95,code)
         LEFT OUTER JOIN(
             SELECT tp7.d96, tp8.d97, tp7.code
             FROM(
-                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                SELECT dbq_temporary_table.road_injury, dbq_temporary_table.country_code
                 FROM dbq_temporary_table
                 WHERE year='1996'
             )AS tp7(d96,code)
             LEFT OUTER JOIN(
-                SELECT dbq_temporary_table.poisoning, dbq_temporary_table.country_code
+                SELECT dbq_temporary_table.road_injury, dbq_temporary_table.country_code
                 FROM dbq_temporary_table
                 WHERE year='1997'
             )AS tp8(d97,code)
-            ON tp7.code = tp8.code
+            USING(code)
         )AS tmp4(d96,d97,code)
-        ON tmp3.code= tmp4.code
+        USING(code)
     )AS temp1(d94,d95,d96,d97,code)
-    ON temp.code = temp1.code
+    USING(code)
 )AS tmp(d90,d91,d92,d93,d94,d95,d96,d97,code)
 WHERE death_toll.country_code = tmp.code
-AND death_toll.disease_id=5;
+AND death_toll.disease_id=2;
 
 
 SELECT * FROM death_toll
-WHERE disease_id=6; 
+WHERE disease_id=2
+AND country_code='IND'; 
